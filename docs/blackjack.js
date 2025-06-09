@@ -85,7 +85,10 @@ function updateUI() {
 } 
 
 function startGame() {
-  if (players.length === 0) return;
+  // Clear previous player results
+  players.forEach((_, i) => {
+    document.getElementById(`player-result-${i}`).innerText = "";
+  });
 
   deck = createDeck();
   dealerHand = [deck.pop(), deck.pop()];
@@ -99,7 +102,6 @@ function startGame() {
 
   updateUI();
   setActivePlayer(currentPlayerIndex);
-  document.getElementById(`player-result-${index}`).innerText = "";
 }
 
 function setActivePlayer(index) {
