@@ -99,6 +99,7 @@ function startGame() {
 
   updateUI();
   setActivePlayer(currentPlayerIndex);
+  document.getElementById(`player-result-${index}`).innerText = "";
 }
 
 function setActivePlayer(index) {
