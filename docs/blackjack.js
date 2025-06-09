@@ -39,11 +39,22 @@ function calculateTotal(hand) {
   return total;
 }
 
-function displayHands() {
-  document.getElementById("player-cards").innerText = playerHand.map(c => c.value + c.suit).join(" ");
-  document.getElementById("dealer-cards").innerText = dealerHand.map(c => c.value + c.suit).join(" ");
+function displayHands(revealDealer = false) {
+  // Player hand (always fully visible)
+  document.getElementById("player-cards").innerText =
+    playerHand.map(c => c.value + c.suit).join(" ");
   document.getElementById("player-total").innerText = calculateTotal(playerHand);
-  document.getElementById("dealer-total").innerText = calculateTotal(dealerHand);
+
+  // Dealer hand
+  if (!revealDealer) {
+    const firstCard = dealerHand[0];
+    document.getElementById("dealer-cards").innerText = `${firstCard.value}${firstCard.suit} 🂠`;
+    document.getElementById("dealer-total").innerText = getCardValue(firstCard);
+  } else {
+    document.getElementById("dealer-cards").innerText =
+      dealerHand.map(c => c.value + c.suit).join(" ");
+    document.getElementById("dealer-total").innerText = calculateTotal(dealerHand);
+  }
 }
 
 function startGame() {
@@ -52,18 +63,19 @@ function startGame() {
   dealerHand = [deck.pop(), deck.pop()];
   gameOver = false;
   document.getElementById("result").innerText = "";
-  displayHands();
+  displayHands(false); // Hide one dealer card
 }
 
 function hit() {
   if (gameOver) return;
   playerHand.push(deck.pop());
-  displayHands();
+  displayHands(false); // Still hide the second dealer card
 
   const total = calculateTotal(playerHand);
   if (total > 21) {
     document.getElementById("result").innerText = "You busted!";
     gameOver = true;
+    displayHands(true); // Reveal dealer cards when busted
   }
 }
 
@@ -74,7 +86,7 @@ function stand() {
     dealerHand.push(deck.pop());
   }
 
-  displayHands();
+  displayHands(true); // Reveal full dealer hand
 
   const playerTotal = calculateTotal(playerHand);
   const dealerTotal = calculateTotal(dealerHand);
@@ -89,4 +101,3 @@ function stand() {
 
   gameOver = true;
 }
-
