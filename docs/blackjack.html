@@ -7,13 +7,19 @@
 </head>
 <body>
   <h1>Blackjack Game</h1>
-  <div id="game">
-    <p><strong>Your Hand:</strong> <span id="player-cards"></span> (<span id="player-total">0</span>)</p>
-    <p><strong>Dealer's Hand:</strong> <span id="dealer-cards"></span> (<span id="dealer-total">0</span>)</p>
+  <div id="controls">
+    <button onclick="addPlayer()">Add Player</button>
+    <button onclick="removePlayer()">Remove Player</button>
     <button onclick="startGame()">Start Game</button>
-    <button onclick="hit()">Hit</button>
-    <button onclick="stand()">Stand</button>
-    <p id="result"></p>
+  </div>
+
+  <div id="players"></div>
+
+  <div id="dealer">
+    <h3>Dealer</h3>
+    <p>Cards: <span id="dealer-cards"></span></p>
+    <p>Total: <span id="dealer-total"></span></p>
+    <p id="dealer-result"></p>
   </div>
   <script src="blackjack.js"></script>
 </body>

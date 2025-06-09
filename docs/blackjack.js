@@ -1,103 +1,141 @@
-let deck, playerHand, dealerHand;
+let players = [];
+let dealerHand = [];
+let deck = [];
+let currentPlayerIndex = 0;
 let gameOver = false;
+const MAX_PLAYERS = 4;
 
 function createDeck() {
-  const suits = ['♠', '♥', '♦', '♣'];
-  const values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
-  let newDeck = [];
-
+  const suits = ["♠", "♥", "♦", "♣"];
+  const values = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
+  let deck = [];
   for (let suit of suits) {
-    for (let value of values) {
-      newDeck.push({ suit, value });
+    for (let val of values) {
+      deck.push({ value: val, suit });
     }
   }
-
-  return newDeck.sort(() => Math.random() - 0.5); // Shuffle
+  return deck.sort(() => Math.random() - 0.5);
 }
 
 function getCardValue(card) {
-  if (['J', 'Q', 'K'].includes(card.value)) return 10;
-  if (card.value === 'A') return 11;
+  if (["J", "Q", "K"].includes(card.value)) return 10;
+  if (card.value === "A") return 11;
   return parseInt(card.value);
 }
 
 function calculateTotal(hand) {
-  let total = 0;
-  let aces = 0;
-
-  for (let card of hand) {
-    total += getCardValue(card);
-    if (card.value === 'A') aces++;
-  }
-
-  // Adjust for aces if total > 21
-  while (total > 21 && aces > 0) {
-    total -= 10;
-    aces--;
-  }
-
+  let total = hand.reduce((sum, c) => sum + getCardValue(c), 0);
+  let aces = hand.filter(c => c.value === "A").length;
+  while (total > 21 && aces--) total -= 10;
   return total;
 }
 
-function displayHands(revealDealer = false) {
-  // Player hand (always fully visible)
-  document.getElementById("player-cards").innerText =
-    playerHand.map(c => c.value + c.suit).join(" ");
-  document.getElementById("player-total").innerText = calculateTotal(playerHand);
+function addPlayer() {
+  if (players.length >= MAX_PLAYERS) return;
+  const num = players.length + 1;
+  players.push({ name: `Player ${num}`, hand: [], isDone: false });
+  renderPlayers();
+}
 
-  // Dealer hand
-  if (!revealDealer) {
-    const firstCard = dealerHand[0];
-    document.getElementById("dealer-cards").innerText = `${firstCard.value}${firstCard.suit} 🂠`;
-    document.getElementById("dealer-total").innerText = getCardValue(firstCard);
-  } else {
-    document.getElementById("dealer-cards").innerText =
-      dealerHand.map(c => c.value + c.suit).join(" ");
-    document.getElementById("dealer-total").innerText = calculateTotal(dealerHand);
+function removePlayer() {
+  if (players.length > 0) {
+    players.pop();
+    renderPlayers();
   }
+}
+
+function renderPlayers() {
+  const container = document.getElementById("players");
+  container.innerHTML = "";
+  players.forEach((player, i) => {
+    container.innerHTML += `
+      <div id="player-${i}">
+        <h3>${player.name}</h3>
+        <p>Cards: <span id="player-cards-${i}"></span></p>
+        <p>Total: <span id="player-total-${i}">0</span></p>
+        <p id="player-result-${i}"></p>
+        <button id="hit-${i}" onclick="hit(${i})">Hit</button>
+        <button id="stand-${i}" onclick="stand(${i})">Stand</button>
+      </div>
+    `;
+  });
 }
 
 function startGame() {
+  if (players.length === 0) return;
+
   deck = createDeck();
-  playerHand = [deck.pop(), deck.pop()];
   dealerHand = [deck.pop(), deck.pop()];
   gameOver = false;
-  document.getElementById("result").innerText = "";
-  displayHands(false); // Hide one dealer card
+  currentPlayerIndex = 0;
+
+  players.forEach(p => {
+    p.hand = [deck.pop(), deck.pop()];
+    p.isDone = false;
+  });
+
+  updateUI();
+  setActivePlayer(currentPlayerIndex);
 }
 
-function hit() {
-  if (gameOver) return;
-  playerHand.push(deck.pop());
-  displayHands(false); // Still hide the second dealer card
+function setActivePlayer(index) {
+  players.forEach((_, i) => {
+    document.getElementById(`hit-${i}`).disabled = i !== index;
+    document.getElementById(`stand-${i}`).disabled = i !== index;
+  });
+}
 
-  const total = calculateTotal(playerHand);
+function hit(index) {
+  if (index !== currentPlayerIndex || gameOver) return;
+
+  players[index].hand.push(deck.pop());
+  const total = calculateTotal(players[index].hand);
+  updateUI();
+
   if (total > 21) {
-    document.getElementById("result").innerText = "You busted!";
-    gameOver = true;
-    displayHands(true); // Reveal dealer cards when busted
+    document.getElementById(`player-result-${index}`).innerText = "Busted!";
+    players[index].isDone = true;
+    nextPlayer();
   }
 }
 
-function stand() {
-  if (gameOver) return;
+function stand(index) {
+  if (index !== currentPlayerIndex || gameOver) return;
+
+  players[index].isDone = true;
+  nextPlayer();
+}
+
+function nextPlayer() {
+  currentPlayerIndex++;
+  if (currentPlayerIndex < players.length) {
+    setActivePlayer(currentPlayerIndex);
+  } else {
+    playDealer();
+  }
+}
+
+function playDealer() {
+  const dealerTotalEl = document.getElementById("dealer-total");
+  const dealerCardsEl = document.getElementById("dealer-cards");
 
   while (calculateTotal(dealerHand) < 17) {
     dealerHand.push(deck.pop());
   }
 
-  displayHands(true); // Reveal full dealer hand
-
-  const playerTotal = calculateTotal(playerHand);
   const dealerTotal = calculateTotal(dealerHand);
+  dealerCardsEl.innerText = dealerHand.map(c => c.value + c.suit).join(" ");
+  dealerTotalEl.innerText = dealerTotal;
 
-  if (dealerTotal > 21 || playerTotal > dealerTotal) {
-    document.getElementById("result").innerText = "You win!";
-  } else if (playerTotal < dealerTotal) {
-    document.getElementById("result").innerText = "Dealer wins!";
-  } else {
-    document.getElementById("result").innerText = "It's a tie!";
-  }
+  players.forEach((p, i) => {
+    const playerTotal = calculateTotal(p.hand);
+    let result;
+    if (playerTotal > 21) result = "Busted!";
+    else if (dealerTotal > 21 || playerTotal > dealerTotal) result = "You win!";
+    else if (playerTotal < dealerTotal) result = "Dealer wins!";
+    else result = "Push.";
+    document.getElementById(`player-result-${i}`).innerText = result;
+  });
 
   gameOver = true;
 }
