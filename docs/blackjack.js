@@ -115,6 +115,29 @@ function nextPlayer() {
   }
 }
 
+function updateUI() {
+  // Update players' cards and totals
+  players.forEach((player, i) => {
+    const cardsSpan = document.getElementById(`player-cards-${i}`);
+    const totalSpan = document.getElementById(`player-total-${i}`);
+
+    cardsSpan.innerText = player.hand.map(c => c.value + c.suit).join(" ");
+    totalSpan.innerText = calculateTotal(player.hand);
+  });
+
+  // Update dealer cards & total (show only first card if game not over)
+  const dealerCardsSpan = document.getElementById("dealer-cards");
+  const dealerTotalSpan = document.getElementById("dealer-total");
+
+  if (!gameOver) {
+    dealerCardsSpan.innerText = dealerHand.length ? dealerHand[0].value + dealerHand[0].suit + " 🂠" : "";
+    dealerTotalSpan.innerText = "?";
+  } else {
+    dealerCardsSpan.innerText = dealerHand.map(c => c.value + c.suit).join(" ");
+    dealerTotalSpan.innerText = calculateTotal(dealerHand);
+  }
+}
+
 function playDealer() {
   const dealerTotalEl = document.getElementById("dealer-total");
   const dealerCardsEl = document.getElementById("dealer-cards");
