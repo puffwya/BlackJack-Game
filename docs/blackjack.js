@@ -6,6 +6,11 @@ let players = [];
 let currentPlayerIndex = 0;
 let gameOver = false;
 const MAX_PLAYERS = 4;
+let dealer = {
+  hand: [],
+  result: ""
+};
+
 
 function createDeck() {
   const suits = ["♠", "♥", "♦", "♣"];
@@ -193,7 +198,7 @@ function updateUI() {
       cardSpan.innerText = hand.map(cardToString).join(", ");
       totalSpan.innerText = calculateTotal(hand);
 
-      // Optional: Highlight current hand
+      // Highlight current hand
       if (i === currentPlayerIndex && handIndex === players[i].activeHandIndex) {
         handDiv.style.border = "2px solid gold";
       } else {
@@ -201,6 +206,19 @@ function updateUI() {
       }
     });
   });
+  
+  // Dealer UI
+  const dealerCardsSpan = document.getElementById("dealer-cards");
+  const dealerTotalSpan = document.getElementById("dealer-total");
+  const dealerResultSpan = document.getElementById("dealer-result");
+
+  if (dealerCardsSpan && dealer.hand) {
+    dealerCardsSpan.innerText = dealer.hand.map(cardToString).join(", ");
+    dealerTotalSpan.innerText = calculateTotal(dealer.hand);
+    // Show result like "Dealer wins" or "Dealer busts"
+    dealerResultSpan.innerText = dealer.result || "";
+  }
+
 }
 
 function renderPlayers() {
