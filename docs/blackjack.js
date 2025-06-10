@@ -1,17 +1,18 @@
-let players = [];
-let dealerHand = [];
+// (Max 4 players, one dealer)
+
 let deck = [];
+let dealerHand = [];
+let players = [];
 let currentPlayerIndex = 0;
 let gameOver = false;
-const MAX_PLAYERS = 4;
 
 function createDeck() {
   const suits = ["♠", "♥", "♦", "♣"];
   const values = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-  let deck = [];
+  const deck = [];
   for (let suit of suits) {
-    for (let val of values) {
-      deck.push({ value: val, suit });
+    for (let value of values) {
+      deck.push({ value, suit });
     }
   }
   return deck.sort(() => Math.random() - 0.5);
@@ -24,144 +25,175 @@ function getCardValue(card) {
 }
 
 function calculateTotal(hand) {
-  let total = hand.reduce((sum, c) => sum + getCardValue(c), 0);
-  let aces = hand.filter(c => c.value === "A").length;
-  while (total > 21 && aces--) total -= 10;
+  let total = 0;
+  let aces = 0;
+  for (let card of hand) {
+    total += getCardValue(card);
+    if (card.value === "A") aces++;
+  }
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces--;
+  }
   return total;
 }
 
-function addPlayer() {
-  if (players.length >= MAX_PLAYERS) return;
-  const num = players.length + 1;
-  players.push({ name: `Player ${num}`, hand: [], isDone: false });
-  renderPlayers();
-}
-
-function removePlayer() {
-  if (players.length > 0) {
-    players.pop();
-    renderPlayers();
-  }
-}
-
-function renderPlayers() {
-  const container = document.getElementById("players");
-  container.innerHTML = "";
-  players.forEach((player, i) => {
-    container.innerHTML += `
-      <div id="player-${i}">
-        <h3>${player.name}</h3>
-        <p>Cards: <span id="player-cards-${i}"></span></p>
-        <p>Total: <span id="player-total-${i}">0</span></p>
-        <p id="player-result-${i}"></p>
-        <button id="hit-${i}" onclick="hit(${i})">Hit</button>
-        <button id="stand-${i}" onclick="stand(${i})">Stand</button>
-      </div>
-    `;
-  });
-}
-
-function updateUI() {
-  // Update players' cards and totals
-  players.forEach((player, i) => {
-    const cardsSpan = document.getElementById(`player-cards-${i}`);
-    const totalSpan = document.getElementById(`player-total-${i}`);
-  
-    cardsSpan.innerText = player.hand.map(c => c.value + c.suit).join(" ");
-    totalSpan.innerText = calculateTotal(player.hand);
-  });
-    
-  // Update dealer cards & total (show only first card if game not over)
-  const dealerCardsSpan = document.getElementById("dealer-cards");
-  const dealerTotalSpan = document.getElementById("dealer-total");
- 
-  if (!gameOver) {
-    dealerCardsSpan.innerText = dealerHand.length ? dealerHand[0].value + dealerHand[0].suit + " 🂠" : "";
-    dealerTotalSpan.innerText = "?";
-  } else {
-    dealerCardsSpan.innerText = dealerHand.map(c => c.value + c.suit).join(" ");
-    dealerTotalSpan.innerText = calculateTotal(dealerHand);
-  }
-} 
-
 function startGame() {
-  // Clear previous player results
-  players.forEach((_, i) => {
-    document.getElementById(`player-result-${i}`).innerText = "";
-  });
-
   deck = createDeck();
   dealerHand = [deck.pop(), deck.pop()];
   gameOver = false;
   currentPlayerIndex = 0;
 
-  players.forEach(p => {
-    p.hand = [deck.pop(), deck.pop()];
+  players.forEach((p, i) => {
+    p.hands = [[deck.pop(), deck.pop()]];
+    p.activeHandIndex = 0;
     p.isDone = false;
+    p.results = [];
+    document.getElementById(`player-result-${i}`).innerText = "";
   });
 
   updateUI();
   setActivePlayer(currentPlayerIndex);
 }
 
-function setActivePlayer(index) {
-  players.forEach((_, i) => {
-    document.getElementById(`hit-${i}`).disabled = i !== index;
-    document.getElementById(`stand-${i}`).disabled = i !== index;
-  });
-}
-
-function hit(index) {
-  if (index !== currentPlayerIndex || gameOver) return;
-
-  players[index].hand.push(deck.pop());
-  const total = calculateTotal(players[index].hand);
-  updateUI();
-
+function hit() {
+  const player = players[currentPlayerIndex];
+  const hand = player.hands[player.activeHandIndex];
+  hand.push(deck.pop());
+  const total = calculateTotal(hand);
   if (total > 21) {
-    document.getElementById(`player-result-${index}`).innerText = "Busted!";
-    players[index].isDone = true;
-    nextPlayer();
-  }
-}
-
-function stand(index) {
-  if (index !== currentPlayerIndex || gameOver) return;
-
-  players[index].isDone = true;
-  nextPlayer();
-}
-
-function nextPlayer() {
-  currentPlayerIndex++;
-  if (currentPlayerIndex < players.length) {
-    setActivePlayer(currentPlayerIndex);
+    player.results.push("Bust");
+    nextHandOrPlayer();
   } else {
-    playDealer();
+    updateUI();
   }
+}
+
+function stand() {
+  players[currentPlayerIndex].results.push("Stand");
+  nextHandOrPlayer();
+}
+
+function nextHandOrPlayer() {
+  const player = players[currentPlayerIndex];
+  player.activeHandIndex++;
+  if (player.activeHandIndex >= player.hands.length) {
+    player.isDone = true;
+    currentPlayerIndex++;
+  }
+  if (currentPlayerIndex >= players.length) {
+    playDealer();
+  } else {
+    setActivePlayer(currentPlayerIndex);
+  }
+  updateUI();
 }
 
 function playDealer() {
-  const dealerTotalEl = document.getElementById("dealer-total");
-  const dealerCardsEl = document.getElementById("dealer-cards");
-
   while (calculateTotal(dealerHand) < 17) {
     dealerHand.push(deck.pop());
   }
+  gameOver = true;
+  updateUI();
+  showResults();
+}
 
+function splitHand(index) {
+  const player = players[index];
+  const hand = player.hands[player.activeHandIndex];
+  if (hand.length !== 2 || getCardValue(hand[0]) !== getCardValue(hand[1])) return;
+
+  player.hands = [
+    [hand[0], deck.pop()],
+    [hand[1], deck.pop()]
+  ];
+  player.activeHandIndex = 0;
+  updateUI();
+}
+
+function showResults() {
   const dealerTotal = calculateTotal(dealerHand);
-  dealerCardsEl.innerText = dealerHand.map(c => c.value + c.suit).join(" ");
-  dealerTotalEl.innerText = dealerTotal;
+  players.forEach((player, i) => {
+    let resultText = "";
+    player.hands.forEach((hand, h) => {
+      const total = calculateTotal(hand);
+      if (total > 21) {
+        resultText += `Hand ${h + 1}: Bust\n`;
+      } else if (dealerTotal > 21 || total > dealerTotal) {
+        resultText += `Hand ${h + 1}: Win\n`;
+      } else if (total === dealerTotal) {
+        resultText += `Hand ${h + 1}: Push\n`;
+      } else {
+        resultText += `Hand ${h + 1}: Lose\n`;
+      }
+    });
+    document.getElementById(`player-result-${i}`).innerText = resultText.trim();
+  });
+}
 
-  players.forEach((p, i) => {
-    const playerTotal = calculateTotal(p.hand);
-    let result;
-    if (playerTotal > 21) result = "Busted!";
-    else if (dealerTotal > 21 || playerTotal > dealerTotal) result = "You win!";
-    else if (playerTotal < dealerTotal) result = "Dealer wins!";
-    else result = "Push.";
-    document.getElementById(`player-result-${i}`).innerText = result;
+function setActivePlayer(index) {
+  for (let i = 0; i < players.length; i++) {
+    const isActive = i === index;
+    document.getElementById(`controls-${i}`).style.display = isActive ? "block" : "none";
+  }
+}
+
+function updateUI() {
+  players.forEach((player, i) => {
+    const hand = player.hands[player.activeHandIndex];
+    const cardsSpan = document.getElementById(`player-cards-${i}`);
+    const totalSpan = document.getElementById(`player-total-${i}`);
+    cardsSpan.innerText = hand.map(c => c.value + c.suit).join(" ");
+    totalSpan.innerText = calculateTotal(hand);
+
+    const canSplit = hand.length === 2 && getCardValue(hand[0]) === getCardValue(hand[1]);
+    document.getElementById(`split-${i}`).style.display = canSplit ? "inline-block" : "none";
   });
 
-  gameOver = true;
+  const dealerCardsSpan = document.getElementById("dealer-cards");
+  const dealerTotalSpan = document.getElementById("dealer-total");
+
+  if (!gameOver) {
+    dealerCardsSpan.innerText = dealerHand[0].value + dealerHand[0].suit + " 🂠";
+    dealerTotalSpan.innerText = "?";
+  } else {
+    dealerCardsSpan.innerText = dealerHand.map(c => c.value + c.suit).join(" ");
+    dealerTotalSpan.innerText = calculateTotal(dealerHand);
+  }
 }
+
+// Call this once to initialize players (max 4)
+function initPlayers(numPlayers) {
+  players = [];
+  for (let i = 0; i < numPlayers && i < 4; i++) {
+    players.push({
+      name: `Player ${i + 1}`,
+      hands: [],
+      activeHandIndex: 0,
+      isDone: false,
+      results: []
+    });
+  }
+  renderUI();
+}
+
+function renderUI() {
+  const container = document.getElementById("game-container");
+  container.innerHTML = "";
+  players.forEach((player, i) => {
+    container.innerHTML += `
+      <div>
+        <h3>${player.name}</h3>
+        <p>Cards: <span id="player-cards-${i}"></span></p>
+        <p>Total: <span id="player-total-${i}"></span></p>
+        <p id="player-result-${i}"></p>
+        <div id="controls-${i}" style="display: none">
+          <button onclick="hit()">Hit</button>
+          <button onclick="stand()">Stand</button>
+          <button id="split-${i}" onclick="splitHand(${i})" style="display: none">Split</button>
+        </div>
+      </div>
+    `;
+  });
+}
+
