@@ -39,6 +39,20 @@ function calculateTotal(hand) {
   return total;
 }
 
+function addPlayer() {
+  if (players.length >= MAX_PLAYERS) return;
+  const num = players.length + 1;
+  players.push({ name: `Player ${num}`, hands: [], activeHandIndex: 0, isDone: false, results: [] });
+  renderPlayers();
+}
+    
+function removePlayer() {
+  if (players.length > 0) {
+    players.pop();
+    renderPlayers();
+  }
+}
+
 function startGame() {
   if (players.length === 0) return;
   deck = createDeck();
@@ -161,20 +175,6 @@ function updateUI() {
   } else {
     dealerCardsSpan.innerText = dealerHand.map(c => c.value + c.suit).join(" ");
     dealerTotalSpan.innerText = calculateTotal(dealerHand);
-  }
-}
-
-function addPlayer() {
-  if (players.length >= MAX_PLAYERS) return;
-  const num = players.length + 1;
-  players.push({ name: `Player ${num}`, hands: [], activeHandIndex: 0, isDone: false, results: [] });
-  renderPlayers();
-}
-
-function removePlayer() {
-  if (players.length > 0) {
-    players.pop();
-    renderPlayers();
   }
 }
 
