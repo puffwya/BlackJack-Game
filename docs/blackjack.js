@@ -1,10 +1,11 @@
-// (Max 4 players, one dealer)
+// Blackjack (Max 4 players, one dealer) Dynamic Player Add/Remove
 
 let deck = [];
 let dealerHand = [];
 let players = [];
 let currentPlayerIndex = 0;
 let gameOver = false;
+const MAX_PLAYERS = 4;
 
 function createDeck() {
   const suits = ["♠", "♥", "♦", "♣"];
@@ -39,6 +40,7 @@ function calculateTotal(hand) {
 }
 
 function startGame() {
+  if (players.length === 0) return;
   deck = createDeck();
   dealerHand = [deck.pop(), deck.pop()];
   gameOver = false;
@@ -56,8 +58,8 @@ function startGame() {
   setActivePlayer(currentPlayerIndex);
 }
 
-function hit() {
-  const player = players[currentPlayerIndex];
+function hit(index = currentPlayerIndex) {
+  const player = players[index];
   const hand = player.hands[player.activeHandIndex];
   hand.push(deck.pop());
   const total = calculateTotal(hand);
@@ -69,8 +71,8 @@ function hit() {
   }
 }
 
-function stand() {
-  players[currentPlayerIndex].results.push("Stand");
+function stand(index = currentPlayerIndex) {
+  players[index].results.push("Stand");
   nextHandOrPlayer();
 }
 
@@ -162,34 +164,33 @@ function updateUI() {
   }
 }
 
-// Call this once to initialize players (max 4)
-function initPlayers(numPlayers) {
-  players = [];
-  for (let i = 0; i < numPlayers && i < 4; i++) {
-    players.push({
-      name: `Player ${i + 1}`,
-      hands: [],
-      activeHandIndex: 0,
-      isDone: false,
-      results: []
-    });
-  }
-  renderUI();
+function addPlayer() {
+  if (players.length >= MAX_PLAYERS) return;
+  const num = players.length + 1;
+  players.push({ name: `Player ${num}`, hands: [], activeHandIndex: 0, isDone: false, results: [] });
+  renderPlayers();
 }
 
-function renderUI() {
-  const container = document.getElementById("game-container");
+function removePlayer() {
+  if (players.length > 0) {
+    players.pop();
+    renderPlayers();
+  }
+}
+
+function renderPlayers() {
+  const container = document.getElementById("players");
   container.innerHTML = "";
   players.forEach((player, i) => {
     container.innerHTML += `
-      <div>
+      <div id="player-${i}">
         <h3>${player.name}</h3>
         <p>Cards: <span id="player-cards-${i}"></span></p>
-        <p>Total: <span id="player-total-${i}"></span></p>
+        <p>Total: <span id="player-total-${i}">0</span></p>
         <p id="player-result-${i}"></p>
         <div id="controls-${i}" style="display: none">
-          <button onclick="hit()">Hit</button>
-          <button onclick="stand()">Stand</button>
+          <button onclick="hit(${i})">Hit</button>
+          <button onclick="stand(${i})">Stand</button>
           <button id="split-${i}" onclick="splitHand(${i})" style="display: none">Split</button>
         </div>
       </div>
