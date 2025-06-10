@@ -39,6 +39,10 @@ function calculateTotal(hand) {
   return total;
 }
 
+function cardToString(card) {
+  return `${card.rank}${card.suit}`;
+}
+
 function addPlayer() {
   if (players.length >= MAX_PLAYERS) return;
   const num = players.length + 1;
