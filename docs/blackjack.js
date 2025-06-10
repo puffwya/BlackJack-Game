@@ -85,24 +85,31 @@ function hit(index = currentPlayerIndex) {
   }
 }
 
-function stand(index = currentPlayerIndex) {
-  players[index].results.push("Stand");
-  nextHandOrPlayer();
-}
-
 function nextHandOrPlayer() {
   const player = players[currentPlayerIndex];
-  player.activeHandIndex++;
-  if (player.activeHandIndex >= player.hands.length) {
+  if (player.activeHandIndex + 1 < player.hands.length) {
+    player.activeHandIndex++;
+    updateUI();
+  } else {
     player.isDone = true;
     currentPlayerIndex++;
+    if (currentPlayerIndex < players.length) {
+      updateUI();
+    } else {
+      playDealer();
+    }
   }
-  if (currentPlayerIndex >= players.length) {
-    playDealer();
-  } else {
-    setActivePlayer(currentPlayerIndex);
-  }
-  updateUI();
+}
+
+function stand(index) {
+  const player = players[index];
+  const hand = player.hands[player.activeHandIndex];
+  if (!hand) return;
+
+  // Mark this hand as done
+  // optionally you can track handStates
+
+  nextHandOrPlayer();
 }
 
 function playDealer() {
@@ -156,26 +163,40 @@ function setActivePlayer(index) {
 
 function updateUI() {
   players.forEach((player, i) => {
-    const hand = player.hands[player.activeHandIndex];
-    const cardsSpan = document.getElementById(`player-cards-${i}`);
-    const totalSpan = document.getElementById(`player-total-${i}`);
-    cardsSpan.innerText = hand.map(c => c.value + c.suit).join(" ");
-    totalSpan.innerText = calculateTotal(hand);
+    const playerContainer = document.getElementById(`player-${i}`);
 
-    const canSplit = hand.length === 2 && getCardValue(hand[0]) === getCardValue(hand[1]);
-    document.getElementById(`split-${i}`).style.display = canSplit ? "inline-block" : "none";
+    if (!playerContainer || !player.hands || !player.hands.length) return;
+
+    player.hands.forEach((hand, handIndex) => {
+      const handId = `player-${i}-hand-${handIndex}`;
+      let handDiv = document.getElementById(handId);
+
+      if (!handDiv) {
+        handDiv = document.createElement("div");
+        handDiv.id = handId;
+        handDiv.innerHTML = `
+          <p>Hand ${handIndex + 1}: <span id="player-cards-${i}-${handIndex}"></span></p>
+          <p>Total: <span id="player-total-${i}-${handIndex}"></span></p>
+          <p id="player-result-${i}-${handIndex}"></p>
+        `;
+        playerContainer.appendChild(handDiv);
+      }
+
+      const cardSpan = document.getElementById(`player-cards-${i}-${handIndex}`);
+      const totalSpan = document.getElementById(`player-total-${i}-${handIndex}`);
+      const resultSpan = document.getElementById(`player-result-${i}-${handIndex}`);
+
+      cardSpan.innerText = hand.map(cardToString).join(", ");
+      totalSpan.innerText = calculateTotal(hand);
+
+      // Optional: Highlight current hand
+      if (i === currentPlayerIndex && handIndex === players[i].activeHandIndex) {
+        handDiv.style.border = "2px solid gold";
+      } else {
+        handDiv.style.border = "none";
+      }
+    });
   });
-
-  const dealerCardsSpan = document.getElementById("dealer-cards");
-  const dealerTotalSpan = document.getElementById("dealer-total");
-
-  if (!gameOver) {
-    dealerCardsSpan.innerText = dealerHand[0].value + dealerHand[0].suit + " 🂠";
-    dealerTotalSpan.innerText = "?";
-  } else {
-    dealerCardsSpan.innerText = dealerHand.map(c => c.value + c.suit).join(" ");
-    dealerTotalSpan.innerText = calculateTotal(dealerHand);
-  }
 }
 
 function renderPlayers() {
