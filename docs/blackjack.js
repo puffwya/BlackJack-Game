@@ -40,7 +40,7 @@ function calculateTotal(hand) {
 }
 
 function cardToString(card) {
-  return `${card.values}${card.suit}`;
+  return `${card.value}${card.suit}`;
 }
 
 function addPlayer() {
