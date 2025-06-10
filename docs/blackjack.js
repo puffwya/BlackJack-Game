@@ -1,7 +1,6 @@
 // Blackjack (Max 4 players, one dealer) Dynamic Player Add/Remove
 
 let deck = [];
-let dealerHand = [];
 let players = [];
 let currentPlayerIndex = 0;
 let gameOver = false;
@@ -65,7 +64,8 @@ function removePlayer() {
 function startGame() {
   if (players.length === 0) return;
   deck = createDeck();
-  dealerHand = [deck.pop(), deck.pop()];
+  dealer.hand = [deck.pop(), deck.pop()];
+  dealer.result = "";
   gameOver = false;
   currentPlayerIndex = 0;
 
@@ -122,8 +122,8 @@ function stand(index) {
 }
 
 function playDealer() {
-  while (calculateTotal(dealerHand) < 17) {
-    dealerHand.push(deck.pop());
+  while (calculateTotal(dealer.hand) < 17) {
+    dealer.hand.push(deck.pop());
   }
   gameOver = true;
   updateUI();
@@ -144,7 +144,7 @@ function splitHand(index) {
 }
 
 function showResults() {
-  const dealerTotal = calculateTotal(dealerHand);
+  const dealerTotal = calculateTotal(dealer.hand);
   players.forEach((player, i) => {
     let resultText = "";
     player.hands.forEach((hand, h) => {
