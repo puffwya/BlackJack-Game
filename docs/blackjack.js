@@ -212,12 +212,19 @@ function updateUI() {
   const dealerTotalSpan = document.getElementById("dealer-total");
   const dealerResultSpan = document.getElementById("dealer-result");
 
-  if (dealerCardsSpan && dealer.hand) {
+if (dealerCardsSpan && dealer.hand) {
+  if (gameOver) {
+    // Show all cards after game ends
     dealerCardsSpan.innerText = dealer.hand.map(cardToString).join(", ");
     dealerTotalSpan.innerText = calculateTotal(dealer.hand);
-    // Show result like "Dealer wins" or "Dealer busts"
-    dealerResultSpan.innerText = dealer.result || "";
+  } else {
+    // Show only the first card and hide the second
+    const firstCard = dealer.hand[0] ? cardToString(dealer.hand[0]) : "";
+    const hiddenCardSymbol = "🂠"; // You can change this to something else if preferred
+    dealerCardsSpan.innerText = dealer.hand.length > 1 ? `${firstCard}, ${hiddenCardSymbol}` : firstCard;
+    dealerTotalSpan.innerText = "?";
   }
+  dealerResultSpan.innerText = dealer.result || "";
 
 }
 
