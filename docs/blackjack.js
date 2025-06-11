@@ -1,15 +1,17 @@
-// Blackjack (Max 4 players, one dealer) Dynamic Player Add/Remove
+// Blackjack (Max 4 players, one dealer) Dynamic Player Add/Remove with Betting System
 
 let deck = [];
 let players = [];
 let currentPlayerIndex = 0;
 let gameOver = false;
 const MAX_PLAYERS = 4;
+const BET_INCREMENTS = [5, 25, 100];
+const MIN_BET = 5;
+
 let dealer = {
   hand: [],
   result: ""
 };
-
 
 function createDeck() {
   const suits = ["♠", "♥", "♦", "♣"];
@@ -50,10 +52,19 @@ function cardToString(card) {
 function addPlayer() {
   if (players.length >= MAX_PLAYERS) return;
   const num = players.length + 1;
-  players.push({ name: `Player ${num}`, hands: [], activeHandIndex: 0, isDone: false, results: [], hasSplit: false });
+  players.push({
+    name: `Player ${num}`,
+    hands: [],
+    activeHandIndex: 0,
+    isDone: false,
+    results: [],
+    hasSplit: false,
+    balance: 500,
+    currentBet: 0
+  });
   renderPlayers();
 }
-    
+
 function removePlayer() {
   if (players.length > 0) {
     players.pop();
@@ -63,6 +74,17 @@ function removePlayer() {
 
 function startGame() {
   if (players.length === 0) return;
+
+  for (let i = 0; i < players.length; i++) {
+    const bet = MIN_BET; // Default to MIN_BET for now; could add UI input later
+    if (players[i].balance < MIN_BET) {
+      alert(`${players[i].name} does not have enough money to play.`);
+      return;
+    }
+    players[i].balance -= bet;
+    players[i].currentBet = bet;
+  }
+
   deck = createDeck();
   dealer.hand = [deck.pop(), deck.pop()];
   dealer.result = "";
@@ -104,7 +126,6 @@ function nextHandOrPlayer() {
     player.isDone = true;
     currentPlayerIndex++;
     if (currentPlayerIndex < players.length) {
-      // Reset active hand for next player
       players[currentPlayerIndex].activeHandIndex = 0;
       setActivePlayer(currentPlayerIndex);
       updateUI();
@@ -118,10 +139,6 @@ function stand(index) {
   const player = players[index];
   const hand = player.hands[player.activeHandIndex];
   if (!hand) return;
-
-  // Mark this hand as done
-  // optionally you can track handStates
-
   nextHandOrPlayer();
 }
 
@@ -136,16 +153,12 @@ function playDealer() {
 
 function splitHand(index) {
   const player = players[index];
-
-  // Prevents re-splitting hand
   if (player.hasSplit) return;
 
   const hand = player.hands[player.activeHandIndex];
   if (hand.length !== 2 || getCardValue(hand[0]) !== getCardValue(hand[1])) return;
 
-  // Update after splitting
   player.hasSplit = true;
-
   player.hands.splice(player.activeHandIndex, 1, [hand[0], deck.pop()], [hand[1], deck.pop()]);
   player.activeHandIndex = 0;
 
@@ -158,12 +171,17 @@ function showResults() {
     let resultText = "";
     player.hands.forEach((hand, h) => {
       const total = calculateTotal(hand);
+      const isBlackjack = hand.length === 2 && total === 21;
+
       if (total > 21) {
         resultText += `Hand ${h + 1}: Bust\n`;
       } else if (dealerTotal > 21 || total > dealerTotal) {
-        resultText += `Hand ${h + 1}: Win\n`;
+        let payout = isBlackjack ? player.currentBet * 1.5 : player.currentBet;
+        player.balance += player.currentBet + payout;
+        resultText += `Hand ${h + 1}: Win (+$${payout})\n`;
       } else if (total === dealerTotal) {
-        resultText += `Hand ${h + 1}: Push\n`;
+        player.balance += player.currentBet;
+        resultText += `Hand ${h + 1}: Push (bet returned)\n`;
       } else {
         resultText += `Hand ${h + 1}: Lose\n`;
       }
@@ -182,7 +200,6 @@ function setActivePlayer(index) {
 function updateUI() {
   players.forEach((player, i) => {
     const playerContainer = document.getElementById(`player-${i}`);
-
     if (!playerContainer || !player.hands || !player.hands.length) return;
 
     player.hands.forEach((hand, handIndex) => {
@@ -200,43 +217,36 @@ function updateUI() {
         playerContainer.appendChild(handDiv);
       }
 
-      const cardSpan = document.getElementById(`player-cards-${i}-${handIndex}`);
-      const totalSpan = document.getElementById(`player-total-${i}-${handIndex}`);
-      const resultSpan = document.getElementById(`player-result-${i}-${handIndex}`);
+      document.getElementById(`player-cards-${i}-${handIndex}`).innerText = hand.map(cardToString).join(", ");
+      document.getElementById(`player-total-${i}-${handIndex}`).innerText = calculateTotal(hand);
 
-      cardSpan.innerText = hand.map(cardToString).join(", ");
-      totalSpan.innerText = calculateTotal(hand);
-
-      // Highlight current hand
-      if (i === currentPlayerIndex && handIndex === players[i].activeHandIndex) {
-        handDiv.style.border = "2px solid gold";
-      } else {
-        handDiv.style.border = "none";
-      }
+      handDiv.style.border = i === currentPlayerIndex && handIndex === players[i].activeHandIndex ? "2px solid gold" : 
+"none";
     });
+
+    const balanceDisplay = document.getElementById(`player-balance-${i}`);
+    if (balanceDisplay) {
+      balanceDisplay.innerText = `Balance: $${player.balance}`;
+    }
   });
-  
-  // Dealer UI
+
   const dealerCardsSpan = document.getElementById("dealer-cards");
   const dealerTotalSpan = document.getElementById("dealer-total");
   const dealerResultSpan = document.getElementById("dealer-result");
 
   if (dealerCardsSpan && dealer.hand) {
     if (gameOver) {
-      // Show all cards after game ends
       dealerCardsSpan.innerText = dealer.hand.map(cardToString).join(", ");
       dealerTotalSpan.innerText = calculateTotal(dealer.hand);
     } else {
-      // Show only the first card and hide the second
       const firstCard = dealer.hand[0] ? cardToString(dealer.hand[0]) : "";
-      const hiddenCardSymbol = "🂠"; // You can change this to something else if preferred
+      const hiddenCardSymbol = "🂠";
       dealerCardsSpan.innerText = dealer.hand.length > 1 ? `${firstCard}, ${hiddenCardSymbol}` : firstCard;
       dealerTotalSpan.innerText = "?";
     }
     dealerResultSpan.innerText = dealer.result || "";
   }
 
-  // Update Split Button Visibility
   players.forEach((player, i) => {
     const controlsDiv = document.getElementById(`controls-${i}`);
     const splitBtn = document.getElementById(`split-${i}`);
@@ -256,7 +266,6 @@ function updateUI() {
       splitBtn.style.display = "none";
     }
   });
-
 }
 
 function renderPlayers() {
@@ -266,6 +275,7 @@ function renderPlayers() {
     container.innerHTML += `
       <div id="player-${i}">
         <h3>${player.name}</h3>
+        <p id="player-balance-${i}">Balance: $${player.balance}</p>
         <p id="player-result-${i}"></p>
         <div id="controls-${i}" style="display: none">
           <button onclick="hit(${i})">Hit</button>
@@ -276,4 +286,3 @@ function renderPlayers() {
     `;
   });
 }
-
