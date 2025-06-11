@@ -72,18 +72,24 @@ function removePlayer() {
   }
 }
 
+function placeBets() {
+  players.forEach((player, i) => {
+    let bet = 0;
+    while (true) {
+      const input = prompt(`${player.name}, you have $${player.balance}. Enter your bet (5, 25, 100):`);
+      bet = parseInt(input);
+      if ([5, 25, 100].includes(bet) && bet <= player.balance) break;
+      alert(`Invalid bet. Must be 5, 25, or 100 and not exceed your balance.`);
+    }
+    player.bets = [bet];
+    player.balance -= bet;
+  });
+}
+
 function startGame() {
   if (players.length === 0) return;
 
-  for (let i = 0; i < players.length; i++) {
-    const bet = MIN_BET; // Default to MIN_BET for now; could add UI input later
-    if (players[i].balance < MIN_BET) {
-      alert(`${players[i].name} does not have enough money to play.`);
-      return;
-    }
-    players[i].balance -= bet;
-    players[i].currentBet = bet;
-  }
+  placeBets();
 
   deck = createDeck();
   dealer.hand = [deck.pop(), deck.pop()];
@@ -158,8 +164,17 @@ function splitHand(index) {
   const hand = player.hands[player.activeHandIndex];
   if (hand.length !== 2 || getCardValue(hand[0]) !== getCardValue(hand[1])) return;
 
+  const currentBet = player.bets[player.activeHandIndex];
+  if (player.balance < currentBet) {
+    alert("Not enough balance to split.");
+    return;
+  }
+
   player.hasSplit = true;
+  player.balance -= currentBet;
+
   player.hands.splice(player.activeHandIndex, 1, [hand[0], deck.pop()], [hand[1], deck.pop()]);
+  player.bets.splice(player.activeHandIndex, 1, currentBet, currentBet);
   player.activeHandIndex = 0;
 
   updateUI();
@@ -171,21 +186,30 @@ function showResults() {
     let resultText = "";
     player.hands.forEach((hand, h) => {
       const total = calculateTotal(hand);
+      const bet = player.bets[h];
+      let win = 0;
+
       const isBlackjack = hand.length === 2 && total === 21;
 
       if (total > 21) {
-        resultText += `Hand ${h + 1}: Bust\n`;
+        resultText += `Hand ${h + 1}: Bust (-$${bet})\n`;
       } else if (dealerTotal > 21 || total > dealerTotal) {
-        let payout = isBlackjack ? player.currentBet * 1.5 : player.currentBet;
-        player.balance += player.currentBet + payout;
-        resultText += `Hand ${h + 1}: Win (+$${payout})\n`;
+        if (isBlackjack) {
+          const winnings = bet * 1.5;
+          player.balance += bet + winnings;
+          resultText += `Hand ${h + 1}: Blackjack! +$${winnings}\n`;
+        } else {
+          player.balance += bet * 2;
+          resultText += `Hand ${h + 1}: Win +$${bet}\n`;
+        }
       } else if (total === dealerTotal) {
-        player.balance += player.currentBet;
-        resultText += `Hand ${h + 1}: Push (bet returned)\n`;
+        player.balance += bet;
+        resultText += `Hand ${h + 1}: Push (Refund $${bet})\n`;
       } else {
-        resultText += `Hand ${h + 1}: Lose\n`;
+        resultText += `Hand ${h + 1}: Lose (-$${bet})\n`;
       }
     });
+    resultText += `Balance: $${player.balance}`;
     document.getElementById(`player-result-${i}`).innerText = resultText.trim();
   });
 }
