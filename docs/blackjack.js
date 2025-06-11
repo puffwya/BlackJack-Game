@@ -226,6 +226,28 @@ function updateUI() {
     }
     dealerResultSpan.innerText = dealer.result || "";
   }
+
+  // Update Split Button Visibility
+  players.forEach((player, i) => {
+    const controlsDiv = document.getElementById(`controls-${i}`);
+    const splitBtn = document.getElementById(`split-${i}`);
+
+    if (!splitBtn || !controlsDiv) return;
+
+    const isActive = i === currentPlayerIndex;
+    const hand = player.hands[player.activeHandIndex];
+
+    if (
+      isActive &&
+      hand.length === 2 &&
+      getCardValue(hand[0]) === getCardValue(hand[1])
+    ) {
+      splitBtn.style.display = "inline-block";
+    } else {
+      splitBtn.style.display = "none";
+    }
+  });
+
 }
 
 function renderPlayers() {
