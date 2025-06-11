@@ -104,6 +104,9 @@ function nextHandOrPlayer() {
     player.isDone = true;
     currentPlayerIndex++;
     if (currentPlayerIndex < players.length) {
+      // Reset active hand for next player
+      players[currentPlayerIndex].activeHandIndex = 0;
+      setActivatePlayer(currentPlayerIndex);
       updateUI();
     } else {
       playDealer();
