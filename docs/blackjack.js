@@ -50,7 +50,7 @@ function cardToString(card) {
 function addPlayer() {
   if (players.length >= MAX_PLAYERS) return;
   const num = players.length + 1;
-  players.push({ name: `Player ${num}`, hands: [], activeHandIndex: 0, isDone: false, results: [] });
+  players.push({ name: `Player ${num}`, hands: [], activeHandIndex: 0, isDone: false, results: [], hasSplit: false });
   renderPlayers();
 }
     
@@ -74,6 +74,7 @@ function startGame() {
     p.activeHandIndex = 0;
     p.isDone = false;
     p.results = [];
+    p.hasSplit = false;
     document.getElementById(`player-result-${i}`).innerText = "";
   });
 
@@ -132,14 +133,19 @@ function playDealer() {
 
 function splitHand(index) {
   const player = players[index];
+
+  // Prevents re-splitting hand
+  if (player.hasSplit) return;
+
   const hand = player.hands[player.activeHandIndex];
   if (hand.length !== 2 || getCardValue(hand[0]) !== getCardValue(hand[1])) return;
 
-  player.hands = [
-    [hand[0], deck.pop()],
-    [hand[1], deck.pop()]
-  ];
+  // Update after splitting
+  player.hasSplit = true;
+
+  player.hands.splice(player.activeHandIndex, 1, [hand[0], deck.pop()], [hand[1], deck.pop()]);
   player.activeHandIndex = 0;
+
   updateUI();
 }
 
