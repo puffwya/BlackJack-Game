@@ -263,8 +263,6 @@ function renderPlayers() {
     container.innerHTML += `
       <div id="player-${i}">
         <h3>${player.name}</h3>
-        <p>Cards: <span id="player-cards-${i}"></span></p>
-        <p>Total: <span id="player-total-${i}">0</span></p>
         <p id="player-result-${i}"></p>
         <div id="controls-${i}" style="display: none">
           <button onclick="hit(${i})">Hit</button>
