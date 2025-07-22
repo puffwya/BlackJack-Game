@@ -14,7 +14,7 @@ let dealer = {
 };
 
 function createDeck() {
-  const suits = ["♠", "♥", "♦", "♣"];
+  const suits = ["\u2660", "\u2665", "\u2666", "\u2663"];
   const values = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
   const deck = [];
   for (let suit of suits) {
@@ -22,7 +22,15 @@ function createDeck() {
       deck.push({ value, suit });
     }
   }
-  return deck.sort(() => Math.random() - 0.5);
+  shuffleDeck(deck);
+  return deck;
+}
+
+function shuffleDeck(deck) {
+  for (let i = deck.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
 }
 
 function getCardValue(card) {
@@ -60,7 +68,7 @@ function addPlayer() {
     results: [],
     hasSplit: false,
     balance: 500,
-    currentBet: 0
+    bets: []
   });
   renderPlayers();
 }
@@ -72,24 +80,29 @@ function removePlayer() {
   }
 }
 
-function placeBets() {
-  players.forEach((player, i) => {
-    let bet = 0;
-    while (true) {
-      const input = prompt(`${player.name}, you have $${player.balance}. Enter your bet (5, 25, 100):`);
-      bet = parseInt(input);
-      if ([5, 25, 100].includes(bet) && bet <= player.balance) break;
-      alert(`Invalid bet. Must be 5, 25, or 100 and not exceed your balance.`);
-    }
-    player.bets = [bet];
-    player.balance -= bet;
-  });
+function lockInBet(index) {
+  const player = players[index];
+  const input = document.getElementById(`bet-input-${index}`);
+  const bet = parseInt(input.value);
+
+  if (isNaN(bet) || bet < 5 || bet % 5 !== 0 || bet > player.balance) {
+    alert(`Invalid bet. Must be a multiple of 5 and ≤ your balance of $${player.balance}.`);
+    return;
+  }
+
+  player.balance -= bet;
+  player.bets = [bet];
+  input.style.border = "2px solid green";
+  input.disabled = true;
+  updateUI();
+}
+
+function allBetsPlaced() {
+  return players.every(p => p.bets.length > 0);
 }
 
 function startGame() {
-  if (players.length === 0) return;
-
-  placeBets();
+  if (players.length === 0 || !allBetsPlaced()) return;
 
   deck = createDeck();
   dealer.hand = [deck.pop(), deck.pop()];
@@ -187,8 +200,6 @@ function showResults() {
     player.hands.forEach((hand, h) => {
       const total = calculateTotal(hand);
       const bet = player.bets[h];
-      let win = 0;
-
       const isBlackjack = hand.length === 2 && total === 21;
 
       if (total > 21) {
@@ -212,7 +223,19 @@ function showResults() {
     resultText += `Balance: $${player.balance}`;
     document.getElementById(`player-result-${i}`).innerText = resultText.trim();
   });
+
+  // Reset bets and enable inputs for next round
+  players.forEach((p, i) => {
+    p.bets = [];
+    const betInput = document.getElementById(`bet-input-${i}`);
+    if (betInput) {
+      betInput.value = "";
+      betInput.style.border = "1px solid gray";
+      betInput.disabled = false;
+    }
+  });
 }
+
 
 function setActivePlayer(index) {
   for (let i = 0; i < players.length; i++) {
@@ -244,8 +267,7 @@ function updateUI() {
       document.getElementById(`player-cards-${i}-${handIndex}`).innerText = hand.map(cardToString).join(", ");
       document.getElementById(`player-total-${i}-${handIndex}`).innerText = calculateTotal(hand);
 
-      handDiv.style.border = i === currentPlayerIndex && handIndex === players[i].activeHandIndex ? "2px solid gold" : 
-"none";
+      handDiv.style.border = i === currentPlayerIndex && handIndex === players[i].activeHandIndex ? "2px solid gold" : "none";
     });
 
     const balanceDisplay = document.getElementById(`player-balance-${i}`);
@@ -264,7 +286,7 @@ function updateUI() {
       dealerTotalSpan.innerText = calculateTotal(dealer.hand);
     } else {
       const firstCard = dealer.hand[0] ? cardToString(dealer.hand[0]) : "";
-      const hiddenCardSymbol = "🂠";
+      const hiddenCardSymbol = "\ud83c\udca0";
       dealerCardsSpan.innerText = dealer.hand.length > 1 ? `${firstCard}, ${hiddenCardSymbol}` : firstCard;
       dealerTotalSpan.innerText = "?";
     }
@@ -301,6 +323,8 @@ function renderPlayers() {
         <h3>${player.name}</h3>
         <p id="player-balance-${i}">Balance: $${player.balance}</p>
         <p id="player-result-${i}"></p>
+        <input type="number" id="bet-input-${i}" placeholder="Enter bet (Min $5, by $5 increments)" min="5" step="5">
+        <button onclick="lockInBet(${i})">Lock In Bet</button>
         <div id="controls-${i}" style="display: none">
           <button onclick="hit(${i})">Hit</button>
           <button onclick="stand(${i})">Stand</button>
@@ -310,3 +334,8 @@ function renderPlayers() {
     `;
   });
 }
+
+window.addPlayer = addPlayer;
+window.removePlayer = removePlayer;
+window.startGame = startGame;
+
